@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+dist/
+.vite/
+*.log
+ollama_models/
+models/
+*.pkl
+.DS_Store

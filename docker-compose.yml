@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: hr_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./infrastructure/db/rls_policies.sql:/docker-entrypoint-initdb.d/02_rls.sql
+      - ./infrastructure/db/seed_data.sql:/docker-entrypoint-initdb.d/03_seed.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hr_ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  cubejs:
+    image: cubejs/cube:latest
+    container_name: hr_cubejs
+    environment:
+      CUBEJS_DB_TYPE: ${CUBEJS_DB_TYPE}
+      CUBEJS_DB_HOST: ${CUBEJS_DB_HOST}
+      CUBEJS_DB_NAME: ${CUBEJS_DB_NAME}
+      CUBEJS_DB_USER: ${CUBEJS_DB_USER}
+      CUBEJS_DB_PASS: ${CUBEJS_DB_PASS}
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET}
+      CUBEJS_DEV_MODE: "true"
+    volumes:
+      - ./cube/schema:/cube/conf/schema
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hr_backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      CUBEJS_URL: http://cubejs:4000
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      ENVIRONMENT: ${ENVIRONMENT}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hr_frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+  ollama_models:
