@@ -5,27 +5,33 @@ Run: pip install faker bcrypt
      python infrastructure/db/generate_seed.py
 """
 
+
 import random
 from datetime import date, timedelta
 from faker import Faker
-import bcrypt
+
 
 fake = Faker()
 random.seed(42)
 Faker.seed(42)
 
+
 # ── All values extracted directly from Demographics-1.csv ─────────────────────
+
 
 GENDERS = ["Male", "Female", "Genderqueer", "Bigender", "Non-binary", "Polygender", "Agender", "Genderfluid"]
 GENDER_WEIGHTS = [42, 40, 5, 4, 3, 3, 2, 1]
+
 
 LEVELS = ["Associate", "Professional", "Senior Associate", "Team Lead", "Manager",
           "Senior Manager", "Director", "Senior Director", "VP", "SVP"]
 LEVEL_WEIGHTS = [18, 20, 22, 10, 12, 8, 5, 2, 2, 1]
 
+
 DEPT_L1 = ["Engineering", "Analytics", "Sales", "Product Development",
            "Finance", "Marketing", "Human Resource", "Business analyst"]
 DEPT_L1_WEIGHTS = [22, 18, 14, 16, 8, 10, 7, 5]
+
 
 DEPT_L2 = [
     "Engineering", "Finance", "IT", "Customer Service", "Sales", "Operations",
@@ -36,6 +42,7 @@ DEPT_L2 = [
     "Public Relations", "Research and Development", "Internal Audit"
 ]
 
+
 DEPT_L3 = [
     "IT", "Accounting", "Purchasing", "Training", "Quality Assurance", "Engineering",
     "Human Resources", "Risk Management", "Operations", "Finance", "Logistics",
@@ -44,6 +51,7 @@ DEPT_L3 = [
     "Business Development", "Information Security", "Vendor Management", "Supply Chain",
     "Research and Development", "Product Development", "Public Relations"
 ]
+
 
 BUSINESS_TITLES = [
     "Software Engineer IV", "Senior Engineer", "Data Coordinator",
@@ -77,6 +85,7 @@ BUSINESS_TITLES = [
     "Engineer I", "Engineer II", "Engineer III", "Graphic Designer", "Senior Editor"
 ]
 
+
 PRIMARY_SKILLS = [
     "Customer Service", "Research", "Marketing", "Software Testing", "Web Development",
     "Graphic Design", "Social Media Management", "Accounting", "SEO Optimization",
@@ -84,6 +93,7 @@ PRIMARY_SKILLS = [
     "Production Support", "Copywriting", "Sales", "Software Development",
     "Project Management", "Public Relations"
 ]
+
 
 SECONDARY_SKILLS = [
     "UI/UX Design", "Teamwork", "Attention to Detail", "Problem Solving",
@@ -98,12 +108,14 @@ SECONDARY_SKILLS = [
     "Public Speaking", "Photography", "Foreign Language Proficiency"
 ]
 
+
 EMP_CATEGORIES = ["Regular", "Contractor", "Intern"]
 EMP_CATEGORY_WEIGHTS = [82, 12, 6]
 EMP_TYPES = ["Full time", "Part time"]
 EMP_TYPE_WEIGHTS = [75, 25]
 WORK_MODES = ["Hybrid", "Onsite", "Remote"]
 WORK_MODE_WEIGHTS = [55, 30, 15]
+
 
 WORK_CITIES = [
     "San Francisco", "New York", "Los Angeles", "Chicago", "Houston", "Phoenix",
@@ -115,6 +127,7 @@ WORK_CITIES = [
     "Miami", "Oakland", "Minneapolis", "Tulsa", "Memphis", "Detroit", "Boston",
     "Washington", "Oklahoma City", "Philadelphia", "Wichita", "El Paso"
 ]
+
 
 CITY_TO_STATE = {
     "San Francisco": "California",   "Los Angeles": "California",    "San Jose": "California",
@@ -135,6 +148,7 @@ CITY_TO_STATE = {
     "Philadelphia": "Pennsylvania",  "Oklahoma City": "Oklahoma",
 }
 
+
 TERMINATION_REASONS = [
     "Voluntary - Dissatisfied by Compensation",    "Voluntary - Dissatisfied by Manager",
     "Voluntary - Better Opportunity",              "Voluntary - Personal Reasons",
@@ -145,6 +159,7 @@ TERMINATION_REASONS = [
     "Involuntary - Unsatisfactory Performance",    "Involuntary - Mutual Consent",
 ]
 TERM_WEIGHTS = [15, 12, 12, 8, 7, 7, 6, 6, 6, 5, 5, 4, 4, 3]
+
 
 EXIT_TYPE_MAP = {
     "Voluntary - Dissatisfied by Compensation":   ("voluntary",   "compensation mismatch"),
@@ -163,6 +178,7 @@ EXIT_TYPE_MAP = {
     "Involuntary - Mutual Consent":                ("involuntary", "mutual consent"),
 }
 
+
 JOB_PROJECTS = [
     "Operation Thunderbolt", "Operation Firestorm", "Operation Phoenix", "Operation Rampage",
     "Operation Avalanche",   "Operation Renegade",  "Operation Blackout", "Mission Alpha",
@@ -173,6 +189,7 @@ JOB_PROJECTS = [
     "Project X",             "Project Armageddon",
 ]
 
+
 HR_BPS = [
     "Laura Thompson", "Patrick Scott", "Jessica Garcia", "Eric Hall", "Michael Johnson",
     "Hannah Parker",  "Brian White",   "Kevin Lee",      "Olivia Lewis",  "Samantha King",
@@ -182,6 +199,7 @@ HR_BPS = [
     "Amanda Rodriguez","Jane Smith",   "Stephanie Roberts","David Martinez","John Doe"
 ]
 
+
 SALARY_BY_LEVEL = {
     "Associate":        (45000,  75000), "Professional":    (60000,  95000),
     "Senior Associate": (80000, 120000), "Team Lead":       (90000, 135000),
@@ -190,20 +208,41 @@ SALARY_BY_LEVEL = {
     "VP":              (230000, 320000), "SVP":             (300000, 420000),
 }
 
+
 RATING_DIST    = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
 RATING_WEIGHTS = [2,   5,   10,  25,  30,  18,  7,   3]
 
 
+# ── Pre-computed hashes — generated inside container with bcrypt==4.0.1 ───────
+# Passwords: analyst123 | manager123 | admin123
+# Regenerate ONLY by running inside hr_backend container:
+#   docker exec -it hr_backend python -c "
+#     from passlib.context import CryptContext
+#     ctx = CryptContext(schemes=['bcrypt'], deprecated='auto')
+#     print(ctx.hash('analyst123'))
+#     print(ctx.hash('manager123'))
+#     print(ctx.hash('admin123'))
+#   "
+USERS = [
+    ("Analyst User",    "analyst@hr.com", "$2b$12$I04nCWJWMQMrSk5WJyimEuLh93Qwi5bep4UHlDeG5VBvCDEih7ROq", "analyst",  "1"),
+    ("Michael Manager", "manager@hr.com", "$2b$12$uKBwhAbwSv2cod5LpB8d8upTiobnfkF7uVqumaY5/OsIEaH0aydT2", "manager",  "1"),
+    ("Admin Lisa",      "admin@hr.com",   "$2b$12$L8b8ZjaHufhshGdTzPFihuIzY4d7KHLUrBICDYRsjz29pORrk3pyW", "hr_admin", "1"),
+]
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def esc(s):
     return str(s).replace("'", "''") if s else ""
+
 
 def rdate(start, end):
     delta = end - start
     if delta.days <= 0:
         return start
     return start + timedelta(days=random.randint(0, delta.days))
+
 
 def dob_for_level(lvl):
     ranges = {
@@ -216,8 +255,10 @@ def dob_for_level(lvl):
     t = date.today()
     return date(t.year - age, random.randint(1, 12), random.randint(1, 28))
 
+
 def opt(v):
     return f"'{v}'" if v else "NULL"
+
 
 def row(emp_id, fn, ln, em, g, dob, ttl, lvl, ps, ss, ec, et, sts, md,
         ct, co, st, sd, td, lp, ljc, sf, sl, sr, dept, d2, d3, bp, pr, cl, tr, salary):
@@ -241,6 +282,7 @@ def row(emp_id, fn, ln, em, g, dob, ttl, lvl, ps, ss, ec, et, sts, md,
 
 # ── Generate ──────────────────────────────────────────────────────────────────
 
+
 lines = []
 lines.append("-- ============================================================")
 lines.append("-- Seed data: aligned with Demographics-1.csv (all 30 columns)")
@@ -249,8 +291,10 @@ lines.append("-- ============================================================")
 lines.append("SET search_path TO hr;")
 lines.append("")
 
-sup_map = {}   # dept -> (first_name, last_name, emp_id)
+
+sup_map = {}
 all_emp = []
+
 
 # ── Pass 1: One supervisor per Dept L1 ───────────────────────────────────────
 lines.append("-- Supervisors (8)")
@@ -279,9 +323,11 @@ for idx, dept in enumerate(DEPT_L1, start=1):
                      "HR Admin", "System", "NULL", dept, d2, d3, bp, pr, cl, None, sal))
     all_emp.append({"id": idx, "dept": dept, "level": "Manager", "status": "Active", "tr": None})
 
+
 lines.append("")
 lines.append("-- Individual contributors (492)")
-eid = 9  # starts after 8 supervisors
+eid = 9
+
 
 for _ in range(492):
     dept = random.choices(DEPT_L1, weights=DEPT_L1_WEIGHTS)[0]
@@ -325,6 +371,7 @@ for _ in range(492):
     all_emp.append({"id": eid, "dept": dept, "level": lvl, "status": sts, "tr": tr})
     eid += 1
 
+
 lines.append("")
 lines.append("-- Employee exits (from all Inactive employees)")
 for e in all_emp:
@@ -336,6 +383,7 @@ for e in all_emp:
             f"INSERT INTO employee_exits (employee_id,exit_date,exit_type,reason) "
             f"VALUES ({e['id']},'{xd}','{xt}','{esc(xr)}');"
         )
+
 
 lines.append("")
 lines.append("-- Performance reviews (2 cycles, active employees)")
@@ -350,6 +398,7 @@ for rid in random.sample(active_ids, min(350, len(active_ids))):
             f"VALUES ({rid},'{rd}',{rat},{rv_id});"
         )
 
+
 lines.append("")
 lines.append("-- Hiring requisitions (25)")
 for _ in range(25):
@@ -362,24 +411,23 @@ for _ in range(25):
         f"VALUES ('{dept}','{od}',{cv},'{sts}');"
     )
 
+
 lines.append("")
-lines.append("-- App users (3 test accounts)")
-for uname, email, role, pwd, er in [
-    ("Analyst User",    "analyst@hr.com", "analyst",  "test123", "NULL"),
-    ("Michael Manager", "manager@hr.com", "manager",  "test123", "1"),
-    ("Admin Lisa",      "admin@hr.com",   "hr_admin", "test123", "NULL"),
-]:
-    hashed = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
+lines.append("-- App users (3 test accounts — hashes verified with bcrypt==4.0.1 inside container)")
+for uname, email, hashed, role, er in USERS:
     lines.append(
         f"INSERT INTO users (name,email,hashed_password,role,employee_id) "
         f"VALUES ('{esc(uname)}','{email}','{esc(hashed)}','{role}',{er});"
     )
 
+
 inactive_n = sum(1 for e in all_emp if e["status"] == "Inactive")
 active_n   = sum(1 for e in all_emp if e["status"] == "Active")
 lines.append(f"\n-- TOTALS: {eid-1} employees | {active_n} active | {inactive_n} inactive | {inactive_n} exits | {min(350,len(active_ids))*2} reviews")
 
+
 with open("infrastructure/db/seed_data.sql", "w") as f:
     f.write("\n".join(lines))
+
 
 print(f"✅ seed_data.sql written to infrastructure/db/seed_data.sql")
