@@ -1,4 +1,5 @@
 .env
+seed_data.sql
 __pycache__/
 *.pyc
 *.pyo
