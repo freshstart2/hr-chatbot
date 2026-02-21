@@ -1,6 +1,5 @@
-version: '3.8'
-
 services:
+
 
   postgres:
     image: postgres:15-alpine
@@ -22,6 +21,7 @@ services:
       timeout: 5s
       retries: 5
 
+
   ollama:
     image: ollama/ollama:latest
     container_name: hr_ollama
@@ -36,6 +36,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
 
   cubejs:
     image: cubejs/cube:latest
@@ -55,6 +56,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
 
   backend:
     build:
@@ -78,6 +80,7 @@ services:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
+
   frontend:
     build:
       context: ./frontend
@@ -90,8 +93,12 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      # node_modules stays INSIDE container — never mount from Windows
+
 
 volumes:
   postgres_data:
